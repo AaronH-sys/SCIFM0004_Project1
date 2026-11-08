@@ -148,10 +148,10 @@ def one_energy(arr,ix,iy,nmax):
     ixm = (ix-1)%nmax # of the neighbours
     iyp = (iy+1)%nmax # with wraparound
     iym = (iy-1)%nmax #
-#
-# Add together the 4 neighbour contributions
-# to the energy
-#
+    #
+    # Add together the 4 neighbour contributions
+    # to the energy
+    #
     ang = arr[ix,iy]-arr[ixp,iy]
     en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
     ang = arr[ix,iy]-arr[ixm,iy]
@@ -178,7 +178,38 @@ def all_energy(arr,nmax):
         for j in range(nmax):
             enall += one_energy(arr,i,j,nmax)
     return enall
-#=======================================================================
+
+def all_energy_numpy(arr):
+    """
+    Arguments:
+	  arr (float(nmax,nmax)) = array that contains lattice data;
+      nmax (int) = side length of square lattice.
+    Description:
+      Function to compute the energy of the entire lattice. Output
+      is in reduced units (U/epsilon).
+	Returns:
+	  enall (float) = reduced energy of lattice.
+    """
+    down = np.roll(arr, 1, 0)
+    up = np.roll(arr, -1, 0)
+    left = np.roll(arr, 1, 1)
+    right = np.roll(arr, -1, 1)
+
+    dd = arr - down
+    du = arr - up
+    dl = arr - left
+    dr = arr - right
+    
+
+    en = 0.5 * (
+    (1 - 3 * np.cos(dd)**2) +
+    (1 - 3 * np.cos(du)**2) +
+    (1 - 3 * np.cos(dl)**2) +
+    (1 - 3 * np.cos(dr)**2)
+    )
+
+    return np.sum(en)
+    #=======================================================================
 def get_order(arr,nmax):
     """
     Arguments:
@@ -276,7 +307,7 @@ def main(program, nsteps, nmax, temp, pflag):
     ratio = np.zeros(nsteps+1,dtype=np.dtype)
     order = np.zeros(nsteps+1,dtype=np.dtype)
     # Set initial values in arrays
-    energy[0] = all_energy(lattice,nmax)
+    energy[0] = all_energy_numpy(lattice,nmax)
     ratio[0] = 0.5 # ideal value
     order[0] = get_order(lattice,nmax)
 
@@ -284,7 +315,7 @@ def main(program, nsteps, nmax, temp, pflag):
     initial = time.time()
     for it in range(1,nsteps+1):
         ratio[it] = MC_step(lattice,temp,nmax)
-        energy[it] = all_energy(lattice,nmax)
+        energy[it] = all_energy_numpy(lattice,nmax)
         order[it] = get_order(lattice,nmax)
     final = time.time()
     runtime = final-initial
