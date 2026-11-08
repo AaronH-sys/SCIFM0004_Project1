@@ -28,6 +28,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from numba import njit
 
 #=======================================================================
 def initdat(nmax):
@@ -128,6 +129,7 @@ def savedat(arr,nsteps,Ts,runtime,ratio,energy,order,nmax):
         print("   {:05d}    {:6.4f} {:12.4f}  {:6.4f} ".format(i,ratio[i],energy[i],order[i]),file=FileOut)
     FileOut.close()
 #=======================================================================
+@njit
 def one_energy(arr,ix,iy,nmax):
     """
     Arguments:
@@ -162,6 +164,7 @@ def one_energy(arr,ix,iy,nmax):
     en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
     return en
 #=======================================================================
+@njit
 def all_energy(arr,nmax):
     """
     Arguments:
@@ -179,6 +182,7 @@ def all_energy(arr,nmax):
             enall += one_energy(arr,i,j,nmax)
     return enall
 #=======================================================================
+@njit
 def get_order(arr,nmax):
     """
     Arguments:
@@ -204,9 +208,10 @@ def get_order(arr,nmax):
                 for j in range(nmax):
                     Qab[a,b] += 3*lab[a,i,j]*lab[b,i,j] - delta[a,b]
     Qab = Qab/(2*nmax*nmax)
-    eigenvalues,eigenvectors = np.linalg.eig(Qab)
+    eigenvalues = np.linalg.eigvalsh(Qab)
     return eigenvalues.max()
 #=======================================================================
+@njit
 def MC_step(arr,Ts,nmax):
     """
     Arguments:
@@ -232,7 +237,7 @@ def MC_step(arr,Ts,nmax):
     accept = 0
     xran = np.random.randint(0,high=nmax, size=(nmax,nmax))
     yran = np.random.randint(0,high=nmax, size=(nmax,nmax))
-    aran = np.random.normal(scale=scale, size=(nmax,nmax))
+    aran = np.random.normal(0, scale=scale, size=(nmax,nmax))
     for i in range(nmax):
         for j in range(nmax):
             ix = xran[i,j]
@@ -279,6 +284,13 @@ def main(program, nsteps, nmax, temp, pflag):
     energy[0] = all_energy(lattice,nmax)
     ratio[0] = 0.5 # ideal value
     order[0] = get_order(lattice,nmax)
+
+    # Run all numba decorated functions once, so compile time is not measured.
+    test_arr = lattice.copy()
+    one_energy(test_arr, 0, 0, nmax)
+    all_energy(test_arr, nmax)
+    get_order(test_arr, nmax)
+    MC_step(test_arr, temp, nmax)
 
     # Begin doing and timing some MC steps.
     initial = time.time()
