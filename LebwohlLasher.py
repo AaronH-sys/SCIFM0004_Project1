@@ -272,9 +272,9 @@ def main(program, nsteps, nmax, temp, pflag):
     # Plot initial frame of lattice
     plotdat(lattice,pflag,nmax)
     # Create arrays to store energy, acceptance ratio and order parameter
-    energy = np.zeros(nsteps+1,dtype=np.dtype)
-    ratio = np.zeros(nsteps+1,dtype=np.dtype)
-    order = np.zeros(nsteps+1,dtype=np.dtype)
+    energy = np.zeros(nsteps+1,dtype=np.float64)
+    ratio = np.zeros(nsteps+1,dtype=np.float64)
+    order = np.zeros(nsteps+1,dtype=np.float64)
     # Set initial values in arrays
     energy[0] = all_energy(lattice,nmax)
     ratio[0] = 0.5 # ideal value
@@ -294,6 +294,8 @@ def main(program, nsteps, nmax, temp, pflag):
     # Plot final frame of lattice and generate output file
     savedat(lattice,nsteps,temp,runtime,ratio,energy,order,nmax)
     plotdat(lattice,pflag,nmax)
+
+    return [nsteps, nmax, temp, order, runtime]
 #=======================================================================
 # Main part of program, getting command line arguments and calling
 # main simulation function.
