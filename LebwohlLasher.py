@@ -345,6 +345,8 @@ def main(program, nsteps, nmax, temp, pflag):
     # Plot final frame of lattice and generate output file
     savedat(lattice,nsteps,temp,runtime,ratio,energy,order,nmax)
     plotdat(lattice,pflag,nmax)
+
+    return [nsteps, nmax, temp, order, runtime]
 #=======================================================================
 # Main part of program, getting command line arguments and calling
 # main simulation function.

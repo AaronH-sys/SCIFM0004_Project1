@@ -3,5 +3,6 @@ report/
 .pytest_cache/
 __pycache__
 *.txt
+*.csv
 
 analysis.ipynb
