@@ -1,0 +1,16 @@
+import sys
+
+from LebwohlLasher_pyx import main
+
+if int(len(sys.argv)) == 5:
+        PROGNAME = sys.argv[0]
+        ITERATIONS = int(sys.argv[1])
+        SIZE = int(sys.argv[2])
+        TEMPERATURE = float(sys.argv[3])
+        PLOTFLAG = int(sys.argv[4])
+        main(PROGNAME, ITERATIONS, SIZE, TEMPERATURE, PLOTFLAG)
+else:
+    print("Usage: python {} <ITERATIONS> <SIZE> <TEMPERATURE> <PLOTFLAG>".format(sys.argv[0]))
+
+def run_from_notebook(program, niter, grid_size, temp, plot):
+    return main(program, niter, grid_size, temp, plot)
