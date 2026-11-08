@@ -2,5 +2,6 @@
 report/
 .pytest_cache/
 __pycache__
+*.txt
 
 analysis.ipynb

@@ -209,7 +209,7 @@ def all_energy_numpy(arr):
     )
 
     return np.sum(en)
-    #=======================================================================
+#=======================================================================
 def get_order(arr,nmax):
     """
     Arguments:
@@ -236,6 +236,26 @@ def get_order(arr,nmax):
                     Qab[a,b] += 3*lab[a,i,j]*lab[b,i,j] - delta[a,b]
     Qab = Qab/(2*nmax*nmax)
     eigenvalues,eigenvectors = np.linalg.eig(Qab)
+    return eigenvalues.max()
+
+def get_order_numpy(arr, nmax):
+    lab = np.array([
+        np.cos(arr),
+        np.sin(arr),
+        np.zeros_like(arr)
+    ])
+
+    delta = np.eye(3)
+
+    # Calculate Q-tensor using NumPy
+    Qab = 3.0 * np.einsum('aij,bij->ab', lab, lab)
+
+    Qab -= nmax * nmax * delta
+
+    Qab /= (2.0 * nmax * nmax)
+
+    eigenvalues = np.linalg.eigvalsh(Qab)
+
     return eigenvalues.max()
 #=======================================================================
 def MC_step(arr,Ts,nmax):
@@ -303,20 +323,20 @@ def main(program, nsteps, nmax, temp, pflag):
     # Plot initial frame of lattice
     plotdat(lattice,pflag,nmax)
     # Create arrays to store energy, acceptance ratio and order parameter
-    energy = np.zeros(nsteps+1,dtype=np.dtype)
-    ratio = np.zeros(nsteps+1,dtype=np.dtype)
-    order = np.zeros(nsteps+1,dtype=np.dtype)
+    energy = np.zeros(nsteps+1,dtype=np.float64)
+    ratio = np.zeros(nsteps+1,dtype=np.float64)
+    order = np.zeros(nsteps+1,dtype=np.float64)
     # Set initial values in arrays
-    energy[0] = all_energy_numpy(lattice,nmax)
+    energy[0] = all_energy_numpy(lattice)
     ratio[0] = 0.5 # ideal value
-    order[0] = get_order(lattice,nmax)
+    order[0] = get_order_numpy(lattice,nmax)
 
     # Begin doing and timing some MC steps.
     initial = time.time()
     for it in range(1,nsteps+1):
         ratio[it] = MC_step(lattice,temp,nmax)
-        energy[it] = all_energy_numpy(lattice,nmax)
-        order[it] = get_order(lattice,nmax)
+        energy[it] = all_energy_numpy(lattice)
+        order[it] = get_order_numpy(lattice,nmax)
     final = time.time()
     runtime = final-initial
     
