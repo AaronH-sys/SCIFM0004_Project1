@@ -32,6 +32,8 @@ import matplotlib as mpl
 cimport cython
 cimport numpy as np
 
+from libc.math cimport cos, exp, sin
+
 ctypedef np.int32_t int_t
 ctypedef np.float64_t real_t
 
@@ -136,7 +138,7 @@ def savedat(arr,nsteps,Ts,runtime,ratio,energy,order,nmax):
 #=======================================================================
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, Py_ssize_t nmax):
+cdef inline real_t one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, Py_ssize_t nmax):
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -170,18 +172,18 @@ def one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, Py_ssize_t nmax
     # to the energy
     #
     ang = arr[ix,iy]-arr[ixp,iy]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
     ang = arr[ix,iy]-arr[ixm,iy]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
     ang = arr[ix,iy]-arr[ix,iyp]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
     ang = arr[ix,iy]-arr[ix,iym]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
     return en
 #=======================================================================
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def all_energy(real_t [:, ::1] arr, Py_ssize_t nmax):
+cdef real_t all_energy(real_t [:, ::1] arr, Py_ssize_t nmax):
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -235,13 +237,20 @@ def get_order(real_t[:, ::1] arr, Py_ssize_t nmax):
     delta = np.eye(3,3)
     lab = np.vstack((np.cos(arr),np.sin(arr),np.zeros_like(arr))).reshape(3,nmax,nmax)
     
-    for a in range(3):
-        for b in range(3):
-            for i in range(nmax):
-                for j in range(nmax):
-                    Qab[a,b] += 3*lab[a,i,j]*lab[b,i,j] - delta[a,b]
+    for i in range(nmax):
+        for j in range(nmax):
+            c = cos(arr[i,j])
+            s = sin(arr[i,j])
 
-            Qab[a,b] = Qab[a,b]/(2*nmax*nmax)
+            Qab[0,0] += 3*c*c - 1
+            Qab[0,1] += 3*c*s
+            Qab[1,0] += 3*c*s
+            Qab[1,1] += 3*s*s - 1
+            Qab[2,2] += -1
+
+    for i in range(3):
+        for j in range(3):
+            Qab[i, j] /= 2*nmax*nmax
 
     max_eigenvalue = np.max(np.linalg.eigvalsh(Qab))
     return max_eigenvalue
@@ -302,7 +311,7 @@ def MC_step(real_t[:, ::1] arr, real_t Ts, Py_ssize_t nmax):
             else:
             # Now apply the Monte Carlo test - compare
             # exp( -(E_new - E_old) / T* ) >= rand(0,1)
-                boltz = np.exp( -(en1 - en0) / Ts )
+                boltz = exp( -(en1 - en0) / Ts )
 
                 if boltz >= np.random.uniform(0.0,1.0):
                     accept += 1
