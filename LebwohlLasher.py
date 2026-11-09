@@ -42,8 +42,7 @@ def initdat(nmax):
 	Returns:
 	  arr (float(nmax,nmax)) = array to hold lattice.
     """
-    arr = np.random.random_sample((nmax,nmax))*2.0*np.pi
-    return arr
+    return np.random.random_sample((nmax,nmax))*2.0*np.pi
 #=======================================================================
 def plotdat(arr,pflag,nmax):
     """
@@ -155,14 +154,15 @@ def one_energy(arr,ix,iy,nmax):
 # to the energy
 #
     ang = arr[ix,iy]-arr[ixp,iy]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += np.cos(ang)**2
     ang = arr[ix,iy]-arr[ixm,iy]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += np.cos(ang)**2
     ang = arr[ix,iy]-arr[ix,iyp]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += np.cos(ang)**2
     ang = arr[ix,iy]-arr[ix,iym]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
-    return en
+    en += np.cos(ang)**2
+
+    return 0.5*(4-3*en)
 #=======================================================================
 @njit
 def all_energy(arr,nmax):
@@ -208,8 +208,8 @@ def get_order(arr,nmax):
                 for j in range(nmax):
                     Qab[a,b] += 3*lab[a,i,j]*lab[b,i,j] - delta[a,b]
     Qab = Qab/(2*nmax*nmax)
-    eigenvalues = np.linalg.eigvalsh(Qab)
-    return eigenvalues.max()
+
+    return np.linalg.eigvalsh(Qab).max()
 #=======================================================================
 @njit
 def MC_step(arr,Ts,nmax):
@@ -238,6 +238,8 @@ def MC_step(arr,Ts,nmax):
     xran = np.random.randint(0,high=nmax, size=(nmax,nmax))
     yran = np.random.randint(0,high=nmax, size=(nmax,nmax))
     aran = np.random.normal(0, scale=scale, size=(nmax,nmax))
+    bran = np.random.uniform(0.0,1.0, size=(nmax,nmax))
+
     for i in range(nmax):
         for j in range(nmax):
             ix = xran[i,j]
@@ -253,7 +255,7 @@ def MC_step(arr,Ts,nmax):
             # exp( -(E_new - E_old) / T* ) >= rand(0,1)
                 boltz = np.exp( -(en1 - en0) / Ts )
 
-                if boltz >= np.random.uniform(0.0,1.0):
+                if boltz >= bran[i,j]:
                     accept += 1
                 else:
                     arr[ix,iy] -= ang
