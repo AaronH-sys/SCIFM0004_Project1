@@ -31,7 +31,7 @@ import matplotlib as mpl
 cimport cython
 cimport numpy as np
 
-from libc.math cimport cos, exp, sin
+from libc.math cimport cos, exp, sin, sqrt
 
 ctypedef np.int32_t int_t
 ctypedef np.float64_t real_t
@@ -134,9 +134,12 @@ def savedat(arr,nsteps,Ts,runtime,ratio,energy,order,nmax):
         print("   {:05d}    {:6.4f} {:12.4f}  {:6.4f} ".format(i,ratio[i],energy[i],order[i]),file=FileOut)
     FileOut.close()
 #=======================================================================
+def one_energy_wrapper(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, Py_ssize_t nmax):
+    return one_energy(arr, ix, iy, nmax)
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline real_t one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, Py_ssize_t nmax):
+cdef inline real_t one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, Py_ssize_t nmax) noexcept:
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -180,9 +183,12 @@ cdef inline real_t one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, 
     # 4 = 4 neighbours
     return 0.5*(4-en)
 #=======================================================================
+def all_energy_wrapper(real_t[:, ::1] arr, Py_ssize_t nmax):
+    return all_energy(arr, nmax)
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef real_t all_energy(real_t [:, ::1] arr, Py_ssize_t nmax):
+cdef real_t all_energy(real_t [:, ::1] arr, Py_ssize_t nmax) noexcept:
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -205,9 +211,12 @@ cdef real_t all_energy(real_t [:, ::1] arr, Py_ssize_t nmax):
             enall += one_energy(arr,i,j,nmax)
     return enall
 #=======================================================================
+def get_order_wrapper(real_t[:, ::1] arr, Py_ssize_t nmax):
+    return get_order(arr, nmax)
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def get_order(real_t[:, ::1] arr, Py_ssize_t nmax):
+cdef real_t get_order(real_t[:, ::1] arr, Py_ssize_t nmax) noexcept:
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -220,38 +229,39 @@ def get_order(real_t[:, ::1] arr, Py_ssize_t nmax):
 	  max(eigenvalues(Qab)) (float) = order parameter for lattice.
     """
     cdef:
-        real_t[:, ::1] Qab = np.zeros((3,3), dtype=np.float64)
+        real_t Qxx, Qxy, Qyy
 
         Py_ssize_t i, j
 
         real_t c, s
 
-        real_t factor, max_eigenvalue
+        real_t factor
 
     #
     # Generate a 3D unit vector for each cell (i,j) and
     # put it in a (3,i,j) array.
     #
 
-    factor = 1/(2*nmax*nmax)
+    Qxx = 0
+    Qxy = 0
+    Qyy = 0
+
+    factor = 3/(2*nmax*nmax)
     
     for i in range(nmax):
         for j in range(nmax):
             c = cos(arr[i,j])
             s = sin(arr[i,j])
 
-            Qab[0,0] += 3*c*c - 1
-            Qab[0,1] += 3*c*s
-            Qab[1,0] += 3*c*s
-            Qab[1,1] += 3*s*s - 1
-            Qab[2,2] += -1
+            Qxx += c*c
+            Qxy += c*s
+            Qyy += s*s
 
-    for i in range(3):
-        for j in range(3):
-            Qab[i, j] *= factor
+    Qxx = Qxx*factor - 0.5
+    Qxy = Qxy*factor
+    Qyy = Qyy*factor - 0.5
 
-    max_eigenvalue = np.max(np.linalg.eigvalsh(Qab))
-    return max_eigenvalue
+    return 0.25 + 0.5*(sqrt((Qxx-Qyy)(Qxx-Qyy) + 4*(Qxy)(Qxy)))
 #=======================================================================
 @cython.boundscheck(False)
 @cython.wraparound(False)
