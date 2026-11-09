@@ -222,20 +222,19 @@ def get_order(real_t[:, ::1] arr, Py_ssize_t nmax):
     """
     cdef:
         real_t[:, ::1] Qab = np.zeros((3,3), dtype=np.float64)
-        real_t[:, ::1] delta = np.zeros((3,3), dtype=np.float64)
-        real_t[:, :, ::1] lab = np.zeros((3,nmax,nmax), dtype=np.float64)
 
-        Py_ssize_t a, b, i, j
+        Py_ssize_t i, j
 
-        real_t max_eigenvalue
+        real_t c, s
+
+        real_t factor, max_eigenvalue
 
     #
     # Generate a 3D unit vector for each cell (i,j) and
     # put it in a (3,i,j) array.
     #
 
-    delta = np.eye(3,3)
-    lab = np.vstack((np.cos(arr),np.sin(arr),np.zeros_like(arr))).reshape(3,nmax,nmax)
+    factor = 1/(2*nmax*nmax)
     
     for i in range(nmax):
         for j in range(nmax):
@@ -250,7 +249,7 @@ def get_order(real_t[:, ::1] arr, Py_ssize_t nmax):
 
     for i in range(3):
         for j in range(3):
-            Qab[i, j] /= 2*nmax*nmax
+            Qab[i, j] *= factor
 
     max_eigenvalue = np.max(np.linalg.eigvalsh(Qab))
     return max_eigenvalue
@@ -285,6 +284,7 @@ def MC_step(real_t[:, ::1] arr, real_t Ts, Py_ssize_t nmax):
         int_t[:, ::1] xran = np.zeros((nmax,nmax), dtype=np.int32)
         int_t[:, ::1] yran = np.zeros((nmax,nmax), dtype=np.int32)
         real_t[:, ::1] aran = np.zeros((nmax,nmax), dtype=np.float64)
+        real_t[:, ::1] bran = np.zeros((nmax,nmax), dtype=np.float64)
 
         Py_ssize_t i, j, ix, iy
 
@@ -297,6 +297,7 @@ def MC_step(real_t[:, ::1] arr, real_t Ts, Py_ssize_t nmax):
     xran = np.random.randint(0,high=nmax, size=(nmax,nmax), dtype=np.int32)
     yran = np.random.randint(0,high=nmax, size=(nmax,nmax), dtype=np.int32)
     aran = np.random.normal(scale=scale, size=(nmax,nmax))
+    bran = np.random.uniform(0.0,1.0, size=(nmax,nmax))
 
     for i in range(nmax):
         for j in range(nmax):
@@ -313,7 +314,7 @@ def MC_step(real_t[:, ::1] arr, real_t Ts, Py_ssize_t nmax):
             # exp( -(E_new - E_old) / T* ) >= rand(0,1)
                 boltz = exp( -(en1 - en0) / Ts )
 
-                if boltz >= np.random.uniform(0.0,1.0):
+                if boltz >= bran[i,j]:
                     accept += 1
                 else:
                     arr[ix,iy] -= ang
