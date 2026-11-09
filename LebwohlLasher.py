@@ -28,7 +28,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from numba import njit
+from numba import njit, prange, set_num_threads, get_num_threads
 
 #=======================================================================
 def initdat(nmax):
@@ -164,7 +164,7 @@ def one_energy(arr,ix,iy,nmax):
     en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
     return en
 #=======================================================================
-@njit
+@njit(parallel=True)
 def all_energy(arr,nmax):
     """
     Arguments:
@@ -177,12 +177,16 @@ def all_energy(arr,nmax):
 	  enall (float) = reduced energy of lattice.
     """
     enall = 0.0
-    for i in range(nmax):
+    for i in prange(nmax):
+        enthread = 0
+
         for j in range(nmax):
-            enall += one_energy(arr,i,j,nmax)
+            enthread += one_energy(arr,i,j,nmax)
+
+        enall += enthread
     return enall
 #=======================================================================
-@njit
+@njit(parallel=True)
 def get_order(arr,nmax):
     """
     Arguments:
@@ -196,18 +200,30 @@ def get_order(arr,nmax):
 	  max(eigenvalues(Qab)) (float) = order parameter for lattice.
     """
     Qab = np.zeros((3,3))
-    delta = np.eye(3,3)
     #
     # Generate a 3D unit vector for each cell (i,j) and
     # put it in a (3,i,j) array.
     #
-    lab = np.vstack((np.cos(arr),np.sin(arr),np.zeros_like(arr))).reshape(3,nmax,nmax)
-    for a in range(3):
-        for b in range(3):
-            for i in range(nmax):
-                for j in range(nmax):
-                    Qab[a,b] += 3*lab[a,i,j]*lab[b,i,j] - delta[a,b]
-    Qab = Qab/(2*nmax*nmax)
+    Qrows = np.zeros((nmax,3,3))
+
+    for i in prange(nmax):
+        for j in range(nmax):
+            c = np.cos(arr[i,j])
+            s = np.sin(arr[i,j])
+
+            Qrows[i,0,0] += 3*c*c - 1
+            Qrows[i,0,1] += 3*c*s
+            Qrows[i,1,0] += 3*c*s
+            Qrows[i,1,1] += 3*s*s - 1
+            Qrows[i,2,2] += -1
+
+    for i in range(nmax):
+        for a in range(3):
+            for b in range(3):
+                Qab[a,b] += Qrows[i,a,b]
+
+    Qab /= (2*nmax*nmax)
+
     eigenvalues = np.linalg.eigvalsh(Qab)
     return eigenvalues.max()
 #=======================================================================
@@ -259,7 +275,7 @@ def MC_step(arr,Ts,nmax):
                     arr[ix,iy] -= ang
     return accept/(nmax*nmax)
 #=======================================================================
-def main(program, nsteps, nmax, temp, pflag):
+def main(program, nsteps, nmax, temp, pflag, threads):
     """
     Arguments:
 	  program (string) = the name of the program;
@@ -272,6 +288,10 @@ def main(program, nsteps, nmax, temp, pflag):
     Returns:
       NULL
     """
+    # Set Number of Threads
+    set_num_threads(threads)
+    print(f"Number of Threads: {get_num_threads()}")
+
     # Create and initialise lattice
     lattice = initdat(nmax)
     # Plot initial frame of lattice
@@ -313,13 +333,14 @@ def main(program, nsteps, nmax, temp, pflag):
 # main simulation function.
 #
 if __name__ == '__main__':
-    if int(len(sys.argv)) == 5:
+    if int(len(sys.argv)) == 6:
         PROGNAME = sys.argv[0]
         ITERATIONS = int(sys.argv[1])
         SIZE = int(sys.argv[2])
         TEMPERATURE = float(sys.argv[3])
         PLOTFLAG = int(sys.argv[4])
-        main(PROGNAME, ITERATIONS, SIZE, TEMPERATURE, PLOTFLAG)
+        THREADS = int(sys.argv[5])
+        main(PROGNAME, ITERATIONS, SIZE, TEMPERATURE, PLOTFLAG, THREADS)
     else:
-        print("Usage: python {} <ITERATIONS> <SIZE> <TEMPERATURE> <PLOTFLAG>".format(sys.argv[0]))
+        print("Usage: python {} <ITERATIONS> <SIZE> <TEMPERATURE> <PLOTFLAG> <THREADS>".format(sys.argv[0]))
 #=======================================================================

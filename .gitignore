@@ -2,6 +2,9 @@
 report/
 analysis.ipynb
 __pycache__
-
+build/
+*.c
+*.so
+*.html
 *.txt
 *.csv
