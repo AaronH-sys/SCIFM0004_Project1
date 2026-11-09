@@ -8,9 +8,10 @@ if int(len(sys.argv)) == 5:
         SIZE = int(sys.argv[2])
         TEMPERATURE = float(sys.argv[3])
         PLOTFLAG = int(sys.argv[4])
-        main(PROGNAME, ITERATIONS, SIZE, TEMPERATURE, PLOTFLAG)
+        THREADS = int(sys.argv[5])
+        main(PROGNAME, ITERATIONS, SIZE, TEMPERATURE, PLOTFLAG, THREADS)
 else:
-    print("Usage: python {} <ITERATIONS> <SIZE> <TEMPERATURE> <PLOTFLAG>".format(sys.argv[0]))
+    print("Usage: python {} <ITERATIONS> <SIZE> <TEMPERATURE> <PLOTFLAG> <THREADS>".format(sys.argv[0]))
 
-def run_from_notebook(program, niter, grid_size, temp, plot):
-    return main(program, niter, grid_size, temp, plot)
+def run_from_notebook(program, niter, grid_size, temp, plot, threads):
+    return main(program, niter, grid_size, temp, plot, threads)

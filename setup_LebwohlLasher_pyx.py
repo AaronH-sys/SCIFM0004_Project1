@@ -6,6 +6,14 @@ from Cython.Build import cythonize
 from setuptools import setup, Extension
 
 import numpy
+import os
+
+
+gcc = "/opt/homebrew/bin/gcc-16"
+
+os.environ["CC"] = gcc
+os.environ["CXX"] = gcc
+os.environ["LDSHARED"] = gcc + " -bundle -undefined dynamic_lookup"
 
 ext_modules = [
     Extension(
@@ -13,11 +21,16 @@ ext_modules = [
         ["LebwohlLasher_pyx.pyx"],
 
         include_dirs=[
-            numpy.get_include()
+            numpy.get_include(),
         ],
 
         extra_compile_args=[
-            "-O3"
+            "-O3",
+            "-fopenmp",
+        ],
+
+        extra_link_args=[
+            "-fopenmp",
         ],
     )
 ]

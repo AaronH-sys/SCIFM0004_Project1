@@ -31,6 +31,9 @@ import matplotlib as mpl
 cimport cython
 cimport numpy as np
 
+from cython.parallel cimport prange
+cimport openmp
+
 from libc.math cimport cos, exp, sin, sqrt
 
 ctypedef np.int32_t int_t
@@ -139,7 +142,7 @@ def one_energy_wrapper(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, Py_ssiz
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline real_t one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, Py_ssize_t nmax) noexcept:
+cdef inline real_t one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, Py_ssize_t nmax) noexcept nogil:
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -183,12 +186,12 @@ cdef inline real_t one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, 
     # 4 = 4 neighbours
     return 0.5*(4-3*en)
 #=======================================================================
-def all_energy_wrapper(real_t[:, ::1] arr, Py_ssize_t nmax):
-    return all_energy(arr, nmax)
+def all_energy_wrapper(real_t[:, ::1] arr, Py_ssize_t nmax, int_t threads):
+    return all_energy(arr, nmax, threads)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef real_t all_energy(real_t [:, ::1] arr, Py_ssize_t nmax) noexcept:
+cdef real_t all_energy(real_t [:, ::1] arr, Py_ssize_t nmax, int_t threads) noexcept nogil:
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -206,17 +209,17 @@ cdef real_t all_energy(real_t [:, ::1] arr, Py_ssize_t nmax) noexcept:
 
     enall = 0.0
 
-    for i in range(nmax):
+    for i in prange(nmax, num_threads=threads):
         for j in range(nmax):
             enall += one_energy(arr,i,j,nmax)
     return enall
 #=======================================================================
-def get_order_wrapper(real_t[:, ::1] arr, Py_ssize_t nmax):
-    return get_order(arr, nmax)
+def get_order_wrapper(real_t[:, ::1] arr, Py_ssize_t nmax, int_t threads):
+    return get_order(arr, nmax, threads)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef real_t get_order(real_t[:, ::1] arr, Py_ssize_t nmax) noexcept:
+cdef real_t get_order(real_t[:, ::1] arr, Py_ssize_t nmax, int_t threads) noexcept nogil:
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -248,7 +251,7 @@ cdef real_t get_order(real_t[:, ::1] arr, Py_ssize_t nmax) noexcept:
 
     factor = 3.0/(2.0*nmax*nmax)
     
-    for i in range(nmax):
+    for i in prange(nmax, num_threads=threads):
         for j in range(nmax):
             c = cos(arr[i,j])
             s = sin(arr[i,j])
@@ -331,7 +334,7 @@ def MC_step(real_t[:, ::1] arr, real_t Ts, Py_ssize_t nmax):
 #=======================================================================
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def main(program, Py_ssize_t nsteps, Py_ssize_t nmax, real_t temp, pflag):
+def main(program, Py_ssize_t nsteps, Py_ssize_t nmax, real_t temp, pflag, int_t threads):
     """
     Arguments:
 	  program (string) = the name of the program;
@@ -365,16 +368,16 @@ def main(program, Py_ssize_t nsteps, Py_ssize_t nmax, real_t temp, pflag):
     plotdat(lattice,pflag,nmax)
     
     # Set initial values in arrays
-    energy[0] = all_energy(lattice,nmax)
+    energy[0] = all_energy(lattice,nmax,threads)
     ratio[0] = 0.5 # ideal value
-    order[0] = get_order(lattice,nmax)
+    order[0] = get_order(lattice,nmax,threads)
 
     # Begin doing and timing some MC steps.
     initial = time.time()
     for it in range(1,nsteps+1):
         ratio[it] = MC_step(lattice,temp,nmax)
-        energy[it] = all_energy(lattice,nmax)
-        order[it] = get_order(lattice,nmax)
+        energy[it] = all_energy(lattice,nmax,threads)
+        order[it] = get_order(lattice,nmax,threads)
     final = time.time()
     runtime = final-initial
     

@@ -20,7 +20,7 @@ def test_one_energy(arr, ix, iy, nmax):
     (lpyx.initdat(12), 12)
 ])
 def test_all_energy(arr, nmax):
-    output = lpyx.all_energy_wrapper(arr, nmax)
+    output = lpyx.all_energy_wrapper(arr, nmax, 1)
 
     assert np.isclose(output, l.all_energy(arr, nmax))
 
@@ -30,7 +30,7 @@ def test_all_energy(arr, nmax):
     (lpyx.initdat(12), 12)
 ])
 def test_get_order(arr, nmax):
-    output = lpyx.get_order_wrapper(arr, nmax)
+    output = lpyx.get_order_wrapper(arr, nmax, 1)
 
     assert np.isclose(output, l.get_order(arr, nmax))
 
