@@ -22,7 +22,6 @@ domains alternate between old data and new data.
 SH 16-Oct-23
 """
 
-import sys
 import time
 import datetime
 import numpy as np
@@ -49,8 +48,7 @@ def initdat(Py_ssize_t nmax):
 	Returns:
 	  arr (float(nmax,nmax)) = array to hold lattice.
     """
-    arr = np.random.random_sample((nmax,nmax))*2.0*np.pi
-    return arr
+    return np.random.random_sample((nmax,nmax))*2.0*np.pi
 #=======================================================================
 def plotdat(arr,pflag,nmax):
     """
@@ -166,20 +164,21 @@ cdef inline real_t one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, 
     iyp = (iy+1)%nmax # with wraparound
     iym = (iy-1+nmax)%nmax #    
 
-
     #
     # Add together the 4 neighbour contributions
     # to the energy
     #
     ang = arr[ix,iy]-arr[ixp,iy]
-    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
+    en += cos(ang)*cos(ang)
     ang = arr[ix,iy]-arr[ixm,iy]
-    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
+    en += cos(ang)*cos(ang)
     ang = arr[ix,iy]-arr[ix,iyp]
-    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
+    en += cos(ang)*cos(ang)
     ang = arr[ix,iy]-arr[ix,iym]
-    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
-    return en
+    en += cos(ang)*cos(ang)
+
+    # 4 = 4 neighbours
+    return 0.5*(4-en)
 #=======================================================================
 @cython.boundscheck(False)
 @cython.wraparound(False)
