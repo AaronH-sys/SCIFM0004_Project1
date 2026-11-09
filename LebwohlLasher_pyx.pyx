@@ -181,7 +181,7 @@ cdef inline real_t one_energy(real_t[:, ::1] arr, Py_ssize_t ix, Py_ssize_t iy, 
     en += cos(ang)*cos(ang)
 
     # 4 = 4 neighbours
-    return 0.5*(4-en)
+    return 0.5*(4-3*en)
 #=======================================================================
 def all_energy_wrapper(real_t[:, ::1] arr, Py_ssize_t nmax):
     return all_energy(arr, nmax)
@@ -242,11 +242,11 @@ cdef real_t get_order(real_t[:, ::1] arr, Py_ssize_t nmax) noexcept:
     # put it in a (3,i,j) array.
     #
 
-    Qxx = 0
-    Qxy = 0
-    Qyy = 0
+    Qxx = 0.0
+    Qxy = 0.0
+    Qyy = 0.0
 
-    factor = 3/(2*nmax*nmax)
+    factor = 3.0/(2.0*nmax*nmax)
     
     for i in range(nmax):
         for j in range(nmax):
@@ -261,7 +261,7 @@ cdef real_t get_order(real_t[:, ::1] arr, Py_ssize_t nmax) noexcept:
     Qxy = Qxy*factor
     Qyy = Qyy*factor - 0.5
 
-    return 0.25 + 0.5*(sqrt((Qxx-Qyy)(Qxx-Qyy) + 4*(Qxy)(Qxy)))
+    return 0.25 + 0.5*(sqrt((Qxx-Qyy)*(Qxx-Qyy) + 4*(Qxy)*(Qxy)))
 #=======================================================================
 @cython.boundscheck(False)
 @cython.wraparound(False)
