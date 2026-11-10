@@ -373,12 +373,12 @@ def main(program, Py_ssize_t nsteps, Py_ssize_t nmax, real_t temp, pflag, int_t 
     order[0] = get_order(lattice,nmax,threads)
 
     # Begin doing and timing some MC steps.
-    initial = time.time()
+    initial = openmp.omp_get_wtime()
     for it in range(1,nsteps+1):
         ratio[it] = MC_step(lattice,temp,nmax)
         energy[it] = all_energy(lattice,nmax,threads)
         order[it] = get_order(lattice,nmax,threads)
-    final = time.time()
+    final = openmp.omp_get_wtime()
     runtime = final-initial
     
     # Final outputs
