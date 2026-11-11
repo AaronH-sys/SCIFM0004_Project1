@@ -21,3 +21,9 @@ install_name_tool -delete_rpath /opt/anaconda3/lib LebwohlLasher_pyx.cpython-312
 
 ### Parallel Numba Cython
 Run the same way as their serial counterparts, with the number of threads being passed after the plot flag 
+
+### Testing
+Testing was carried out with Pytest, using tests written in the test_ files. Tests can be run with the command:
+```
+pytest -v
+```
